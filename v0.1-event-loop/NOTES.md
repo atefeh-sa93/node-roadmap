@@ -27,3 +27,25 @@ When the Promise is done, the rest of the function runs as a microtask.
   The first error is a full exit, and all results are lost.
 - `Promise.allSettled`: always waits for all of them to finish, success or failure, and then it's done.
   It never rejects, and it gives a status for each item.
+
+  ## 5. Busy vs waiting: how to tell?
+- Busy: JavaScript itself is doing the computation. It blocks the event loop.
+- Waiting: someone else (disk, network, database, OS) is doing the work,
+  and JavaScript only waits for the answer. The event loop stays free.
+
+Busy examples: heavy image processing, sorting a huge array, a long regex on a big string.
+Waiting examples: a database query, an HTTP request, setTimeout and setInterval.
+(Sort and regex are only a problem when the data is very large.)
+
+## 6. `bcrypt.hash` vs `bcrypt.hashSync`
+- `hashSync` runs on the main JavaScript thread, so it blocks the event loop
+  and every user has to wait.
+- `hash` runs on a libuv background thread, so the main thread stays free
+  for other requests. It uses the same CPU, just somewhere else.
+- In a server, always use `hash` (any function ending in `Sync` blocks).
+
+## 7. Does `async` + `await` make a heavy loop non-blocking?
+No. The server still freezes. The heavy loop keeps the thread busy and
+nothing else can run until it finishes. `async` only makes the function
+return a Promise. `await` only helps when there is real I/O behind it.
+Real fixes: chunk it with `setImmediate`, use `worker_threads`, or a job queue.
